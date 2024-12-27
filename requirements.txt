@@ -1,0 +1,6 @@
+flask
+twilio
+psycopg2-binary
+openai
+python-dotenv
+gunicorn

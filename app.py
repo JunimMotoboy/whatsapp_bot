@@ -1,27 +1,25 @@
 from flask import Flask, request
 from twilio.twiml.messaging_response import MessagingResponse
-from dotenv import load_dotenv
-import os
+import openai
 import psycopg2
 import json
-import openai
+import os
 
 # Configuração do Flask
 app = Flask(__name__)
 
 # Configurações de Conexão com o PostgreSQL
 DB_CONFIG = {
-    "dbname": "clientes",
-    "user": "postgres",
-    "password": "lg99487330",
-    "host": "clientes.ctwwgeq28qr7.us-east-1.rds.amazonaws.com",
-    "port": "5432"  # Porta padrão do PostgreSQL
+    "dbname": os.getenv("DB_NAME"),
+    "user": os.getenv("DB_USER"),
+    "password": os.getenv("DB_PASSWORD"),
+    "host": os.getenv("DB_HOST"),
+    "port": os.getenv("DB_PORT", "5432"),  # Porta padrão, mas pode ser configurada
 }
 
 # Configuração da API do OpenAI
-load_dotenv()
-
 openai.api_key = os.getenv("OPENAI_API_KEY")
+
 # Função para buscar dados do cliente no PostgreSQL
 def get_client_config(from_number):
     try:
@@ -44,12 +42,11 @@ def get_client_config(from_number):
 # Função para interagir com a API do OpenAI
 def chat_with_openai(user_message):
     try:
-        response = openai.Completion.create(
-            engine="text-davinci-003",
-            prompt=user_message,
-            max_tokens=150
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",  # Ou outro modelo que você prefira
+            messages=[{"role": "user", "content": user_message}]
         )
-        return response.choices[0].text.strip()
+        return response['choices'][0]['message']['content'].strip()
     except Exception as e:
         print(f"Erro ao acessar a API OpenAI: {e}")
         return "Desculpe, não consegui processar sua solicitação agora."
@@ -80,6 +77,7 @@ def webhook():
     elif "call" in incoming_msg.lower() or "agendar" in incoming_msg.lower():
         response.message(mensagens["convite"])
     else:
+        # Caso a mensagem não tenha correspondido com as opções acima, chama a IA
         resposta_ia = chat_with_openai(incoming_msg)
         response.message(resposta_ia)
 
